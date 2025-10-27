@@ -1,15 +1,20 @@
-import { Text, View } from "react-native";
+import { Alert } from "react-native";
+import { MainScreen } from "./src/features/core";
 
 export default function Index() {
+  const handleLogout = () => {
+    Alert.alert("Cerrar sesión", "Funcionalidad pendiente de implementación.");
+  };
+
   return (
-    <View
-      style={{
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
+    <MainScreen
+      onLogout={handleLogout}
+      onCreateCourse={() => {
+        Alert.alert("Crear curso", "Navegación pendiente de implementación.");
       }}
-    >
-      <Text>Edit app/index.tsx to edit this screen.</Text>
-    </View>
+      onNavigateToSettings={() => {
+        Alert.alert("Configuración", "Navegación pendiente de implementación.");
+      }}
+    />
   );
 }
