@@ -6,12 +6,14 @@ interface MainScreenProps {
   onLogout?: () => void;
   onNavigateToSettings?: () => void;
   onCreateCourse?: () => void;
+  currentUserName?: string;
 }
 
 export function MainScreen({
   onLogout,
   onNavigateToSettings,
   onCreateCourse,
+  currentUserName,
 }: MainScreenProps) {
   return (
     <View style={styles.container}>
@@ -28,6 +30,7 @@ export function MainScreen({
         onLogout={onLogout}
         onCreateCourse={onCreateCourse}
         onNavigateToSettings={onNavigateToSettings}
+        currentUserName={currentUserName}
       />
     </View>
   );

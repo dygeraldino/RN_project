@@ -1,6 +1,7 @@
 export interface AuthTokens {
   accessToken: string;
   refreshToken: string;
+  user?: Record<string, any> | null;
 }
 
 export interface LoginRequest {
@@ -24,6 +25,6 @@ export interface ForgotPasswordRequest {
 }
 
 export interface ResetPasswordRequest {
-  password: string;
   token: string;
+  newPassword: string;
 }
