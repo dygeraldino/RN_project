@@ -1,13 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Course as DomainCourse,
+  CourseRepository,
+  robleCourseRepository,
+} from "../../../courses";
 
-export type Course = {
-  id?: number;
+export interface HomeCourse {
+  id?: string;
   title: string;
   role: string;
   createdAt: Date;
   students: number;
   description?: string;
-};
+}
 
 export enum SortOption {
   nameAsc = "nameAsc",
@@ -19,14 +24,16 @@ export enum SortOption {
 }
 
 export interface HomeControllerOptions {
-  initialCourses?: Course[];
+  initialCourses?: HomeCourse[];
   currentUserName?: string;
+  currentUserId?: string | null;
+  repository?: CourseRepository;
   onLogout?: () => void;
 }
 
-const DEFAULT_COURSES: Course[] = [
+const DEFAULT_COURSES: HomeCourse[] = [
   {
-    id: 1,
+    id: "1",
     title: "Alicia's Course",
     role: "Estudiante",
     createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
@@ -34,7 +41,7 @@ const DEFAULT_COURSES: Course[] = [
     description: "Curso introductorio de programación",
   },
   {
-    id: 2,
+    id: "2",
     title: "UI/UX Design",
     role: "Estudiante",
     createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
@@ -42,7 +49,7 @@ const DEFAULT_COURSES: Course[] = [
     description: "Fundamentos de diseño de interfaces",
   },
   {
-    id: 3,
+    id: "3",
     title: "DATA STRUCTURE II",
     role: "Estudiante",
     createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
@@ -50,7 +57,7 @@ const DEFAULT_COURSES: Course[] = [
     description: "Estructuras de datos avanzadas",
   },
   {
-    id: 4,
+    id: "4",
     title: "Desarrollo Móvil",
     role: "Profesor",
     createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
@@ -58,7 +65,7 @@ const DEFAULT_COURSES: Course[] = [
     description: "Desarrollo de aplicaciones móviles nativas",
   },
   {
-    id: 5,
+    id: "5",
     title: "Flutter Avanzado",
     role: "Profesor",
     createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
@@ -66,7 +73,7 @@ const DEFAULT_COURSES: Course[] = [
     description: "Desarrollo avanzado con Flutter",
   },
   {
-    id: 6,
+    id: "6",
     title: "JavaScript Básico",
     role: "Estudiante",
     createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
@@ -79,17 +86,46 @@ export function useHomeController(options: HomeControllerOptions = {}) {
   const {
     initialCourses = DEFAULT_COURSES,
     currentUserName = "Usuario",
+    currentUserId = null,
+    repository: providedRepository,
     onLogout,
   } = options;
 
-  const [courses, setCourses] = useState<Course[]>([]);
+  const repository = providedRepository ?? robleCourseRepository;
+
+  const [courses, setCourses] = useState<HomeCourse[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeRoleFilter, setActiveRoleFilter] = useState<string | null>(null);
   const [currentSort, setCurrentSort] = useState<SortOption>(
     SortOption.nameAsc
   );
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const allCoursesRef = useRef<Course[]>([]);
+  const allCoursesRef = useRef<HomeCourse[]>([]);
+
+  const normalizeHomeCourse = useCallback(
+    (course: HomeCourse): HomeCourse => ({
+      ...course,
+      createdAt:
+        course.createdAt instanceof Date
+          ? course.createdAt
+          : new Date(course.createdAt),
+    }),
+    []
+  );
+
+  const mapDomainCourseToHomeCourse = useCallback(
+    (course: DomainCourse): HomeCourse => ({
+      id: course.id ?? undefined,
+      title: course.title,
+      role: course.role,
+      createdAt: course.createdAt,
+      students: course.studentCount,
+      description: course.description,
+    }),
+    []
+  );
 
   const activeFilters = useMemo(
     () => (activeRoleFilter ? 1 : 0),
@@ -154,19 +190,57 @@ export function useHomeController(options: HomeControllerOptions = {}) {
   }, [activeRoleFilter, searchQuery, currentSort]);
 
   const loadCourses = useCallback(async () => {
-    // Si en el futuro llega información remota, este es el punto de integración.
-    allCoursesRef.current = initialCourses.map((course) => ({
-      ...course,
-      createdAt:
-        course.createdAt instanceof Date
-          ? course.createdAt
-          : new Date(course.createdAt),
-    }));
-    applyFilters();
-  }, [initialCourses, applyFilters]);
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      if (currentUserId) {
+        const [studentCourses, professorCourses] = await Promise.all([
+          repository.getCoursesByStudent(currentUserId, {
+            currentUserId,
+          }),
+          repository.getCoursesByProfessor(currentUserId, {
+            currentUserId,
+          }),
+        ]);
+
+        const merged = new Map<string, DomainCourse>();
+        const register = (course: DomainCourse) => {
+          const key = course.id ?? `${course.title}|${course.professorId}`;
+          if (!merged.has(key)) {
+            merged.set(key, course);
+          }
+        };
+
+        studentCourses.forEach(register);
+        professorCourses.forEach(register);
+
+        const domainCourses = Array.from(merged.values());
+        allCoursesRef.current = domainCourses.map(mapDomainCourseToHomeCourse);
+      } else {
+        allCoursesRef.current = initialCourses.map(normalizeHomeCourse);
+      }
+
+      applyFilters();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message);
+      allCoursesRef.current = initialCourses.map(normalizeHomeCourse);
+      applyFilters();
+    } finally {
+      setIsLoading(false);
+    }
+  }, [
+    applyFilters,
+    currentUserId,
+    initialCourses,
+    mapDomainCourseToHomeCourse,
+    normalizeHomeCourse,
+    repository,
+  ]);
 
   useEffect(() => {
-    loadCourses();
+    void loadCourses();
   }, [loadCourses]);
 
   useEffect(() => {
@@ -182,11 +256,12 @@ export function useHomeController(options: HomeControllerOptions = {}) {
   }, []);
 
   const addCourse = useCallback(
-    (course: Course) => {
-      allCoursesRef.current = [...allCoursesRef.current, course];
+    (course: HomeCourse) => {
+      const normalized = normalizeHomeCourse(course);
+      allCoursesRef.current = [...allCoursesRef.current, normalized];
       applyFilters();
     },
-    [applyFilters]
+    [applyFilters, normalizeHomeCourse]
   );
 
   const logout = useCallback(() => {
@@ -206,6 +281,8 @@ export function useHomeController(options: HomeControllerOptions = {}) {
 
   return {
     courses,
+    isLoading,
+    error,
     searchQuery,
     setSearchQuery,
     activeRoleFilter,

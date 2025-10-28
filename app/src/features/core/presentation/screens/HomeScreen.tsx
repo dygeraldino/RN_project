@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
+  ActivityIndicator,
   FlatList,
   Modal,
   Pressable,
@@ -9,26 +10,47 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useHomeController } from "../controllers/useHomeController";
+import { useFocusEffect } from "expo-router";
+import {
+  useHomeController,
+  HomeCourse,
+  SortOption,
+} from "../controllers/useHomeController";
 
 interface HomeScreenProps {
   currentUserName?: string;
+  currentUserId?: string | null;
   onNavigateToSettings?: () => void;
   onCreateCourse?: () => void;
+  onJoinCourse?: () => void;
+  onSelectCourse?: (course: HomeCourse) => void;
   onLogout?: () => void;
 }
 
 export function HomeScreen({
   currentUserName,
+  currentUserId,
   onNavigateToSettings,
   onCreateCourse,
+  onJoinCourse,
+  onSelectCourse,
   onLogout,
 }: HomeScreenProps) {
   const [filterVisible, setFilterVisible] = useState(false);
+  const [sortVisible, setSortVisible] = useState(false);
   const controller = useHomeController({
     currentUserName,
+    currentUserId,
     onLogout,
   });
+
+  const reloadCourses = controller.reload;
+
+  useFocusEffect(
+    useCallback(() => {
+      void reloadCourses();
+    }, [reloadCourses])
+  );
 
   return (
     <View style={styles.container}>
@@ -42,6 +64,9 @@ export function HomeScreen({
                 size={20}
                 color="#111827"
               />
+            </Pressable>
+            <Pressable style={styles.iconButton} onPress={onJoinCourse}>
+              <Ionicons name="enter-outline" size={20} color="#111827" />
             </Pressable>
             <Pressable style={styles.iconButton} onPress={onNavigateToSettings}>
               <Ionicons name="settings-outline" size={20} color="#111827" />
@@ -66,6 +91,13 @@ export function HomeScreen({
             placeholderTextColor="#6b7280"
           />
           <Pressable
+            onPress={() => setSortVisible(true)}
+            style={styles.sortButton}
+          >
+            <Ionicons name="swap-vertical" size={18} color="#1d4ed8" />
+            <Text style={styles.sortLabel}>{controller.sortLabel}</Text>
+          </Pressable>
+          <Pressable
             onPress={() => setFilterVisible(true)}
             style={styles.filterButton}
           >
@@ -85,27 +117,49 @@ export function HomeScreen({
         )}
       </View>
 
+      {controller.error && (
+        <View style={styles.errorBanner}>
+          <Ionicons name="warning-outline" size={16} color="#b91c1c" />
+          <Text style={styles.errorText}>{controller.error}</Text>
+        </View>
+      )}
+
       <Text style={styles.sectionTitle}>Tus cursos</Text>
       <FlatList
         data={controller.courses}
         keyExtractor={(course) => `${course.id ?? course.title}`}
         contentContainerStyle={styles.listContent}
-        ListEmptyComponent={
+        refreshing={controller.isLoading}
+        onRefresh={controller.reload}
+        ListEmptyComponent={() => (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>Sin resultados</Text>
+            {controller.isLoading ? (
+              <ActivityIndicator size="small" color="#2563eb" />
+            ) : (
+              <Text style={styles.emptyStateText}>Sin resultados</Text>
+            )}
           </View>
-        }
+        )}
         renderItem={({ item }) => (
-          <View style={styles.card}>
+          <Pressable
+            onPress={() => onSelectCourse?.(item)}
+            style={({ pressed }) => [
+              styles.card,
+              pressed ? styles.cardPressed : undefined,
+            ]}
+          >
             <View style={styles.cardIcon}>
               <Ionicons name="book" size={20} color="#fff" />
             </View>
             <View style={styles.cardContent}>
               <Text style={styles.cardTitle}>{item.title}</Text>
               <Text style={styles.cardSubtitle}>Rol: {item.role}</Text>
+              <Text style={styles.cardMeta}>
+                Estudiantes: {item.students ?? 0}
+              </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
-          </View>
+          </Pressable>
         )}
       />
 
@@ -165,6 +219,46 @@ export function HomeScreen({
                 </Text>
               </Pressable>
             )}
+          </View>
+        </Pressable>
+      </Modal>
+
+      <Modal
+        visible={sortVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setSortVisible(false)}
+      >
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => setSortVisible(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Ordenar por</Text>
+            {(
+              [
+                { label: "Nombre A-Z", value: SortOption.nameAsc },
+                { label: "Nombre Z-A", value: SortOption.nameDesc },
+                { label: "Más recientes", value: SortOption.dateDesc },
+                { label: "Más antiguos", value: SortOption.dateAsc },
+                { label: "Más estudiantes", value: SortOption.studentsDesc },
+                { label: "Menos estudiantes", value: SortOption.studentsAsc },
+              ] as const
+            ).map((option) => (
+              <Pressable
+                key={option.value}
+                style={styles.modalOption}
+                onPress={() => {
+                  controller.setSortOption(option.value);
+                  setSortVisible(false);
+                }}
+              >
+                <Text style={styles.modalOptionLabel}>{option.label}</Text>
+                {controller.currentSort === option.value && (
+                  <Ionicons name="checkmark" size={16} color="#2563eb" />
+                )}
+              </Pressable>
+            ))}
           </View>
         </Pressable>
       </Modal>
@@ -247,6 +341,19 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
   },
+  sortButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#e0f2fe",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  sortLabel: {
+    color: "#1d4ed8",
+    fontWeight: "600",
+  },
   filterLabel: {
     color: "#1d4ed8",
     fontWeight: "600",
@@ -274,6 +381,21 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     color: "#111827",
   },
+  errorBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#fee2e2",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 12,
+  },
+  errorText: {
+    color: "#991b1b",
+    fontWeight: "500",
+    flex: 1,
+  },
   listContent: {
     paddingBottom: 96,
     gap: 12,
@@ -290,6 +412,10 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
     elevation: 3,
+  },
+  cardPressed: {
+    transform: [{ scale: 0.98 }],
+    opacity: 0.9,
   },
   cardIcon: {
     width: 48,
@@ -310,6 +436,11 @@ const styles = StyleSheet.create({
   cardSubtitle: {
     marginTop: 4,
     color: "#6b7280",
+  },
+  cardMeta: {
+    marginTop: 4,
+    color: "#9ca3af",
+    fontSize: 12,
   },
   emptyState: {
     marginTop: 32,

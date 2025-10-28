@@ -1,20 +1,44 @@
+import { useCallback } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { HomeScreen } from "./HomeScreen";
+import { HomeCourse } from "../controllers/useHomeController";
 
 interface MainScreenProps {
   onLogout?: () => void;
   onNavigateToSettings?: () => void;
-  onCreateCourse?: () => void;
   currentUserName?: string;
+  currentUserId?: string | null;
 }
 
 export function MainScreen({
   onLogout,
   onNavigateToSettings,
-  onCreateCourse,
   currentUserName,
+  currentUserId,
 }: MainScreenProps) {
+  const router = useRouter();
+
+  const handleCreateCourse = useCallback(() => {
+    router.push("/courses/create" as any);
+  }, [router]);
+
+  const handleJoinCourse = useCallback(() => {
+    router.push("/courses/join" as any);
+  }, [router]);
+
+  const handleSelectCourse = useCallback(
+    (course: HomeCourse) => {
+      if (!course.id) return;
+      router.push({
+        pathname: "/courses/[courseId]",
+        params: { courseId: course.id },
+      } as any);
+    },
+    [router]
+  );
+
   return (
     <View style={styles.container}>
       <View style={styles.appBar}>
@@ -28,9 +52,12 @@ export function MainScreen({
       </View>
       <HomeScreen
         onLogout={onLogout}
-        onCreateCourse={onCreateCourse}
+        onCreateCourse={handleCreateCourse}
+        onJoinCourse={handleJoinCourse}
+        onSelectCourse={handleSelectCourse}
         onNavigateToSettings={onNavigateToSettings}
         currentUserName={currentUserName}
+        currentUserId={currentUserId}
       />
     </View>
   );

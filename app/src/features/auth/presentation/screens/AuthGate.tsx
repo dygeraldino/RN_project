@@ -23,6 +23,9 @@ export function AuthGate() {
     <MainScreen
       onLogout={logout}
       currentUserName={currentUser?.name ?? "Usuario"}
+      currentUserId={
+        currentUser?.uuid ?? (currentUser ? String(currentUser.id) : null)
+      }
     />
   );
 }
