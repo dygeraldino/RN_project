@@ -56,15 +56,13 @@ export function HomeScreen({
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.appBarRow}>
-          <Text style={styles.appBarTitle}>Main Page</Text>
+          <View style={styles.profileRow}>
+            <View style={styles.avatar}>
+              <Ionicons name="person" size={24} color="#fff" />
+            </View>
+            <Text style={styles.userName}>{controller.currentUserName}</Text>
+          </View>
           <View style={styles.appBarActions}>
-            <Pressable style={styles.iconButton}>
-              <Ionicons
-                name="notifications-outline"
-                size={20}
-                color="#111827"
-              />
-            </Pressable>
             <Pressable style={styles.iconButton} onPress={onJoinCourse}>
               <Ionicons name="enter-outline" size={20} color="#111827" />
             </Pressable>
@@ -75,12 +73,6 @@ export function HomeScreen({
               <Ionicons name="log-out-outline" size={20} color="#dc2626" />
             </Pressable>
           </View>
-        </View>
-        <View style={styles.profileRow}>
-          <View style={styles.avatar}>
-            <Ionicons name="person" size={28} color="#fff" />
-          </View>
-          <Text style={styles.userName}>{controller.currentUserName}</Text>
         </View>
         <View style={styles.actionsRow}>
           <TextInput
@@ -282,11 +274,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 16,
   },
-  appBarTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#111827",
-  },
   appBarActions: {
     flexDirection: "row",
     alignItems: "center",
@@ -300,16 +287,15 @@ const styles = StyleSheet.create({
   profileRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 20,
+    gap: 12,
   },
   avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: "#2563eb",
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
   },
   userName: {
     fontSize: 20,
