@@ -20,7 +20,6 @@ import {
 interface HomeScreenProps {
   currentUserName?: string;
   currentUserId?: string | null;
-  onNavigateToSettings?: () => void;
   onCreateCourse?: () => void;
   onJoinCourse?: () => void;
   onSelectCourse?: (course: HomeCourse) => void;
@@ -30,7 +29,6 @@ interface HomeScreenProps {
 export function HomeScreen({
   currentUserName,
   currentUserId,
-  onNavigateToSettings,
   onCreateCourse,
   onJoinCourse,
   onSelectCourse,
@@ -65,9 +63,6 @@ export function HomeScreen({
           <View style={styles.appBarActions}>
             <Pressable style={styles.iconButton} onPress={onJoinCourse}>
               <Ionicons name="enter-outline" size={20} color="#111827" />
-            </Pressable>
-            <Pressable style={styles.iconButton} onPress={onNavigateToSettings}>
-              <Ionicons name="settings-outline" size={20} color="#111827" />
             </Pressable>
             <Pressable style={styles.iconButton} onPress={controller.logout}>
               <Ionicons name="log-out-outline" size={20} color="#dc2626" />

@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react";
 import {
   ActivityIndicator,
+  Pressable,
   RefreshControl,
   SafeAreaView,
   ScrollView,
@@ -13,6 +14,7 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../../auth";
 import { useCourseDetailController } from "../hooks/useCourseDetailController";
 import { ActionButton } from "../components/ActionButton";
@@ -32,6 +34,14 @@ export function CourseDetailScreen() {
     currentUserId:
       currentUser?.uuid ?? (currentUser ? String(currentUser.id) : null),
   });
+
+  const goBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/" as any);
+    }
+  };
 
   useEffect(() => {
     if (controller.course?.title) {
@@ -184,6 +194,13 @@ export function CourseDetailScreen() {
           />
         }
       >
+        <View style={styles.navRow}>
+          <Pressable onPress={goBack} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={20} color="#1f2937" />
+            <Text style={styles.backLabel}>Volver</Text>
+          </Pressable>
+        </View>
+
         {controller.activeTab === "activities" && (
           <ActivitiesSection
             activities={controller.activities}
@@ -644,6 +661,20 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     gap: 24,
     paddingBottom: 140,
+  },
+  navRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  backButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 4,
+  },
+  backLabel: {
+    color: "#1f2937",
+    fontWeight: "600",
   },
   centered: {
     flex: 1,

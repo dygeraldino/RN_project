@@ -1,20 +1,17 @@
 import { useCallback } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { HomeScreen } from "./HomeScreen";
 import { HomeCourse } from "../controllers/useHomeController";
 
 interface MainScreenProps {
   onLogout?: () => void;
-  onNavigateToSettings?: () => void;
   currentUserName?: string;
   currentUserId?: string | null;
 }
 
 export function MainScreen({
   onLogout,
-  onNavigateToSettings,
   currentUserName,
   currentUserId,
 }: MainScreenProps) {
@@ -43,16 +40,12 @@ export function MainScreen({
     <View style={styles.container}>
       <View style={styles.appBar}>
         <Text style={styles.title}>Explorar</Text>
-        <Pressable style={styles.menuButton} onPress={onLogout}>
-          <Ionicons name="log-out-outline" size={22} color="#1f2937" />
-        </Pressable>
       </View>
       <HomeScreen
         onLogout={onLogout}
         onCreateCourse={handleCreateCourse}
         onJoinCourse={handleJoinCourse}
         onSelectCourse={handleSelectCourse}
-        onNavigateToSettings={onNavigateToSettings}
         currentUserName={currentUserName}
         currentUserId={currentUserId}
       />
@@ -80,8 +73,5 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "700",
     color: "#111827",
-  },
-  menuButton: {
-    padding: 8,
   },
 });

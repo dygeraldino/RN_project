@@ -1,5 +1,13 @@
-import { SafeAreaView, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  Pressable,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { useJoinCourseController } from "../hooks/useJoinCourseController";
 import { ActionButton } from "../components/ActionButton";
 
@@ -12,9 +20,21 @@ export function JoinCourseScreen() {
     },
   });
 
+  const goBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
+        <View style={styles.navRow}>
+          <Pressable onPress={goBack} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={20} color="#1f2937" />
+            <Text style={styles.backLabel}>Volver</Text>
+          </Pressable>
+        </View>
         <View style={styles.header}>
           <Text style={styles.title}>Unirme a un curso</Text>
           <Text style={styles.subtitle}>
@@ -68,6 +88,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 24,
     gap: 20,
+  },
+  navRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  backButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 4,
+  },
+  backLabel: {
+    color: "#1f2937",
+    fontWeight: "600",
   },
   header: {
     gap: 8,
