@@ -146,6 +146,41 @@ export function CourseDetailScreen() {
     );
   };
 
+  const handleLeaveCourse = () => {
+    Alert.alert(
+      "Salir del curso",
+      "¿Estás seguro de que deseas salir de este curso?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Salir",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await controller.leaveCourse();
+              Alert.alert(
+                "Curso abandonado",
+                "Has salido del curso correctamente."
+              );
+              if (router.canGoBack()) {
+                router.back();
+              } else {
+                router.replace("/" as any);
+              }
+            } catch (error) {
+              Alert.alert(
+                "Error",
+                error instanceof Error
+                  ? error.message
+                  : "No se pudo salir del curso."
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleDeleteCourse = () => {
     Alert.alert(
       "Eliminar curso",
@@ -238,6 +273,10 @@ export function CourseDetailScreen() {
             activityStats={controller.activityStats}
             studentsCount={controller.course.studentCount}
             courseCode={controller.courseCode ?? null}
+            onLeaveCourse={
+              controller.isProfessor ? undefined : handleLeaveCourse
+            }
+            isLeavingCourse={controller.isLeaving}
           />
         )}
       </ScrollView>
@@ -510,6 +549,8 @@ interface InfoSectionProps {
   activityStats: { total: number; pending: number; overdue: number };
   studentsCount: number;
   courseCode: string | null;
+  onLeaveCourse?: () => void;
+  isLeavingCourse?: boolean;
 }
 
 interface CourseDetail {
@@ -532,6 +573,8 @@ function InfoSection({
   activityStats,
   studentsCount,
   courseCode,
+  onLeaveCourse,
+  isLeavingCourse,
 }: InfoSectionProps) {
   return (
     <View style={styles.section}>
@@ -598,6 +641,20 @@ function InfoSection({
           />
           <Text style={styles.deleteHint}>
             Esta acción eliminará el curso y sus inscripciones asociadas.
+          </Text>
+        </View>
+      ) : onLeaveCourse ? (
+        <View style={styles.leaveBlock}>
+          <Text style={styles.leaveHeading}>Opciones del estudiante</Text>
+          <ActionButton
+            label={isLeavingCourse ? "Saliendo..." : "Salir del curso"}
+            onPress={onLeaveCourse}
+            disabled={isLeavingCourse}
+            variant="danger"
+          />
+          <Text style={styles.leaveHint}>
+            Perderás el acceso a las actividades y necesitarás un nuevo código
+            para volver a unirte.
           </Text>
         </View>
       ) : null}
@@ -886,6 +943,19 @@ const styles = StyleSheet.create({
     color: "#7f1d1d",
   },
   deleteHint: {
+    color: "#6b7280",
+    fontSize: 13,
+  },
+  leaveBlock: {
+    marginTop: 24,
+    gap: 8,
+  },
+  leaveHeading: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1d4ed8",
+  },
+  leaveHint: {
     color: "#6b7280",
     fontSize: 13,
   },

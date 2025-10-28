@@ -90,6 +90,14 @@ export class RobleCourseRepositoryImpl implements CourseRepository {
 
     await this.enrollmentService.enrollStudent(studentId, course.id, "student");
   }
+
+  async leaveCourse(parameters: {
+    studentId: string;
+    courseId: string;
+  }): Promise<void> {
+    const { studentId, courseId } = parameters;
+    await this.enrollmentService.unenrollStudent(studentId, courseId);
+  }
 }
 
 export const robleCourseRepository = new RobleCourseRepositoryImpl();
