@@ -38,7 +38,6 @@ export function useCourseDetailController(
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setRefreshing] = useState(false);
   const [isDeleting, setDeleting] = useState(false);
-  const [isLeaving, setLeaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadCourse = useCallback(async () => {
@@ -50,7 +49,7 @@ export function useCourseDetailController(
       throw new Error("Curso no encontrado");
     }
     return result;
-  }, [course, courseId, currentUserId, repository]);
+  }, [courseId, currentUserId, repository]);
 
   const loadActivities = useCallback(async () => {
     if (!courseId) return [] as ActivityRecord[];
@@ -164,62 +163,6 @@ export function useCourseDetailController(
     }
   }, [course?.id, courseId, repository]);
 
-  const leaveCourse = useCallback(async () => {
-    if (!courseId) {
-      throw new Error("No se pudo determinar el curso a abandonar.");
-    }
-
-    if (!currentUserId) {
-      throw new Error("Usuario no autenticado");
-    }
-
-    setLeaving(true);
-    try {
-      await repository.leaveCourse({
-        studentId: currentUserId,
-        courseId,
-      });
-
-      setStudents((prev) =>
-        prev.filter((student) => {
-          const identifier =
-            (student["_id"] as string | undefined) ??
-            (student["id"] as string | undefined);
-          return identifier !== currentUserId;
-        })
-      );
-
-      let shouldClear = false;
-
-      setCourse((prev) => {
-        if (!prev) {
-          return prev;
-        }
-
-        const userIsProfessor = prev.professorId === currentUserId;
-        const nextCount = Math.max(0, prev.studentCount - 1);
-
-        if (!userIsProfessor) {
-          shouldClear = true;
-          return null;
-        }
-
-        return {
-          ...prev,
-          studentCount: nextCount,
-        };
-      });
-
-      if (shouldClear) {
-        setActivities([]);
-        setCategories([]);
-        setStudents([]);
-      }
-    } finally {
-      setLeaving(false);
-    }
-  }, [courseId, currentUserId, repository]);
-
   return {
     course,
     activities,
@@ -236,7 +179,5 @@ export function useCourseDetailController(
     courseCode,
     deleteCourse,
     isDeleting,
-    leaveCourse,
-    isLeaving,
   };
 }

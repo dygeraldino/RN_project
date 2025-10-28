@@ -168,57 +168,8 @@ export class RobleCourseService {
   }
 
   async deleteCourse(courseId: string): Promise<void> {
-    await this.removeCourseRelations(courseId);
     await this.enrollments.removeEnrollmentsByCourse(courseId);
     await this.database.delete(COURSES_TABLE, courseId);
-  }
-
-  private async removeCourseRelations(courseId: string): Promise<void> {
-    const [activities, categories, groups, groupMembers] = await Promise.all([
-      this.database.read("activities").catch(() => [] as RawCourseRecord[]),
-      this.database.read("categories").catch(() => [] as RawCourseRecord[]),
-      this.database.read("groups").catch(() => [] as RawCourseRecord[]),
-      this.database.read("group_members").catch(() => [] as RawCourseRecord[]),
-    ]);
-
-    const activityIds = activities
-      .filter((activity) => activity["course_id"] === courseId)
-      .map((activity) => activity["_id"])
-      .filter((id): id is string => typeof id === "string");
-
-    const categoryIds = categories
-      .filter((category) => category["course_id"] === courseId)
-      .map((category) => category["_id"])
-      .filter((id): id is string => typeof id === "string");
-
-    const groupIds = groups
-      .filter((group) => categoryIds.includes(group["category_id"]))
-      .map((group) => group["_id"])
-      .filter((id): id is string => typeof id === "string");
-
-    const memberIds = groupMembers
-      .filter((member) => groupIds.includes(member["group_id"]))
-      .map((member) => member["_id"])
-      .filter((id): id is string => typeof id === "string");
-
-    const deletions: Promise<void>[] = [];
-
-    memberIds.forEach((id) =>
-      deletions.push(this.database.delete("group_members", id))
-    );
-    groupIds.forEach((id) =>
-      deletions.push(this.database.delete("groups", id))
-    );
-    activityIds.forEach((id) =>
-      deletions.push(this.database.delete("activities", id))
-    );
-    categoryIds.forEach((id) =>
-      deletions.push(this.database.delete("categories", id))
-    );
-
-    if (deletions.length) {
-      await Promise.all(deletions);
-    }
   }
 
   private mapRecordsToCourses(

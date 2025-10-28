@@ -3,10 +3,7 @@ import { Course } from "../models/course";
 export interface CourseRepository {
   create(course: Course): Promise<void>;
   getAll(options?: { currentUserId?: string | null }): Promise<Course[]>;
-  getById(
-    id: string,
-    options?: { currentUserId?: string | null }
-  ): Promise<Course | null>;
+  getById(id: string, options?: { currentUserId?: string | null }): Promise<Course | null>;
   update(courseId: string, course: Course): Promise<void>;
   delete(courseId: string): Promise<void>;
   getCoursesByProfessor(
@@ -21,9 +18,5 @@ export interface CourseRepository {
   joinCourseByCode(parameters: {
     studentId: string;
     courseCode: string;
-  }): Promise<void>;
-  leaveCourse(parameters: {
-    studentId: string;
-    courseId: string;
   }): Promise<void>;
 }
