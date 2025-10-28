@@ -9,6 +9,7 @@ import {
   View,
   Alert,
   Share,
+  Platform,
 } from "react-native";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
@@ -183,39 +184,6 @@ export function CourseDetailScreen() {
           />
         }
       >
-        <View style={styles.header}>
-          <Text style={styles.title}>{controller.course.title}</Text>
-          <Text style={styles.subtitle}>{controller.course.description}</Text>
-          <View style={styles.headerPills}>
-            <View style={styles.pill}>
-              <Text style={styles.pillText}>{controller.course.role}</Text>
-            </View>
-            <View style={styles.pill}>
-              <Text style={styles.pillText}>
-                Estudiantes: {controller.course.studentCount}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.actionRow}>
-          <ActionButton
-            label="Actualizar datos"
-            onPress={controller.refresh}
-            disabled={controller.isRefreshing}
-          />
-          <ActionButton
-            label="Copiar código"
-            onPress={handleCopyCode}
-            variant="secondary"
-          />
-          <ActionButton
-            label="Compartir código"
-            onPress={handleShareCode}
-            variant="secondary"
-          />
-        </View>
-
         {controller.activeTab === "activities" && (
           <ActivitiesSection
             activities={controller.activities}
@@ -248,6 +216,13 @@ export function CourseDetailScreen() {
             isProfessor={controller.isProfessor}
             onDeleteCourse={handleDeleteCourse}
             isDeleting={controller.isDeleting}
+            onCopyCode={handleCopyCode}
+            onShareCode={handleShareCode}
+            onRefresh={controller.refresh}
+            isRefreshing={controller.isRefreshing}
+            activityStats={controller.activityStats}
+            studentsCount={controller.course.studentCount}
+            courseCode={controller.courseCode ?? null}
           />
         )}
       </ScrollView>
@@ -515,6 +490,13 @@ interface InfoSectionProps {
   isProfessor: boolean;
   onDeleteCourse: () => void;
   isDeleting: boolean;
+  onCopyCode: () => void;
+  onShareCode: () => void;
+  onRefresh: () => void;
+  isRefreshing: boolean;
+  activityStats: { total: number; pending: number; overdue: number };
+  studentsCount: number;
+  courseCode: string | null;
 }
 
 interface CourseDetail {
@@ -532,32 +514,76 @@ function InfoSection({
   isProfessor,
   onDeleteCourse,
   isDeleting,
+  onCopyCode,
+  onShareCode,
+  onRefresh,
+  isRefreshing,
+  activityStats,
+  studentsCount,
+  courseCode,
 }: InfoSectionProps) {
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Información del curso</Text>
-      <View style={styles.infoRow}>
-        <Text style={styles.infoLabel}>Profesor ID</Text>
-        <Text style={styles.infoValue}>{course.professorId}</Text>
+      <View style={styles.infoCard}>
+        <Text style={styles.infoCardHeading}>Información del curso</Text>
+        <View style={styles.infoFieldGroup}>
+          <InfoField label="Nombre" value={course.title} emphasized />
+          <InfoField
+            label="Descripción"
+            value={course.description || "Sin descripción"}
+          />
+          <InfoField label="Tu rol" value={course.role} />
+          <InfoField
+            label="Total de estudiantes"
+            value={String(studentsCount)}
+          />
+          <InfoField
+            label="Fecha de creación"
+            value={formatDate(course.createdAt)}
+          />
+          <InfoField label="Código" value={courseCode ?? "-"} code />
+          <InfoField label="Profesor ID" value={course.professorId} />
+        </View>
       </View>
-      <View style={styles.infoRow}>
-        <Text style={styles.infoLabel}>Rol asignado</Text>
-        <Text style={styles.infoValue}>{course.role}</Text>
+
+      <View style={styles.statsCard}>
+        <Text style={styles.statsHeading}>Estadísticas</Text>
+        <View style={styles.statsRow}>
+          <View style={styles.statItem}>
+            <Text style={styles.statLabel}>Total de actividades</Text>
+            <Text style={styles.statValue}>{activityStats.total}</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={styles.statLabel}>Estudiantes inscritos</Text>
+            <Text style={styles.statValue}>{studentsCount}</Text>
+          </View>
+        </View>
       </View>
-      <View style={styles.infoRow}>
-        <Text style={styles.infoLabel}>Código</Text>
-        <Text style={styles.infoValue}>{course.id ?? "-"}</Text>
+
+      <View style={styles.quickActions}>
+        <Text style={styles.quickActionsHeading}>Acciones rápidas</Text>
+        <ActionButton
+          label={isRefreshing ? "Actualizando..." : "Actualizar datos"}
+          onPress={onRefresh}
+          disabled={isRefreshing}
+        />
+        <View style={styles.quickActionsRow}>
+          <ActionButton
+            label="Copiar código"
+            onPress={onCopyCode}
+            variant="secondary"
+          />
+          <ActionButton
+            label="Compartir código"
+            onPress={onShareCode}
+            variant="secondary"
+          />
+        </View>
       </View>
-      <View style={styles.infoRow}>
-        <Text style={styles.infoLabel}>Registrados</Text>
-        <Text style={styles.infoValue}>{course.studentCount}</Text>
-      </View>
-      <View style={styles.infoRow}>
-        <Text style={styles.infoLabel}>Creado el</Text>
-        <Text style={styles.infoValue}>{formatDate(course.createdAt)}</Text>
-      </View>
+
       {isProfessor ? (
         <View style={styles.deleteBlock}>
+          <Text style={styles.deleteHeading}>Administración del curso</Text>
           <ActionButton
             label={isDeleting ? "Eliminando..." : "Eliminar curso"}
             onPress={onDeleteCourse}
@@ -569,6 +595,31 @@ function InfoSection({
           </Text>
         </View>
       ) : null}
+    </View>
+  );
+}
+
+interface InfoFieldProps {
+  label: string;
+  value: string;
+  emphasized?: boolean;
+  code?: boolean;
+}
+
+function InfoField({ label, value, emphasized, code }: InfoFieldProps) {
+  return (
+    <View style={styles.infoField}>
+      <Text style={styles.infoFieldLabel}>{label}</Text>
+      <Text
+        style={[
+          styles.infoFieldValue,
+          emphasized ? styles.infoFieldValueEmphasized : null,
+          code ? styles.infoFieldValueCode : null,
+        ]}
+        numberOfLines={code ? 1 : undefined}
+      >
+        {value}
+      </Text>
     </View>
   );
 }
@@ -599,39 +650,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 20,
-  },
-  header: {
-    gap: 12,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#111827",
-  },
-  subtitle: {
-    fontSize: 15,
-    color: "#4b5563",
-    lineHeight: 22,
-  },
-  headerPills: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  actionRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-  },
-  pill: {
-    backgroundColor: "#e0f2fe",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  pillText: {
-    color: "#075985",
-    fontWeight: "600",
   },
   bottomBar: {
     flexDirection: "row",
@@ -748,24 +766,104 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 12,
   },
-  infoRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 14,
+  infoCard: {
+    backgroundColor: "#fdf2f8",
+    borderRadius: 18,
+    padding: 20,
+    gap: 16,
   },
-  infoLabel: {
+  infoCardHeading: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1f2937",
+  },
+  infoFieldGroup: {
+    gap: 12,
+  },
+  infoField: {
+    gap: 4,
+  },
+  infoFieldLabel: {
+    color: "#6b7280",
+    fontSize: 13,
     fontWeight: "600",
-    color: "#4b5563",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
   },
-  infoValue: {
+  infoFieldValue: {
     color: "#111827",
+    fontSize: 16,
+    lineHeight: 22,
+  },
+  infoFieldValueEmphasized: {
+    fontWeight: "700",
+    fontSize: 18,
+  },
+  infoFieldValueCode: {
+    fontFamily: Platform.select({ ios: "Menlo", android: "monospace" }),
+    letterSpacing: 0.6,
+  },
+  statsCard: {
+    backgroundColor: "#eef2ff",
+    borderRadius: 18,
+    padding: 20,
+    gap: 16,
+  },
+  statsHeading: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1f2937",
+  },
+  statsRow: {
+    flexDirection: "row",
+    gap: 16,
+    flexWrap: "wrap",
+  },
+  statItem: {
+    flex: 1,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 16,
+    gap: 8,
+    shadowColor: "#1f2937",
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
+  },
+  statLabel: {
+    color: "#4b5563",
     fontWeight: "600",
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#1d4ed8",
+  },
+  quickActions: {
+    backgroundColor: "#ecfeff",
+    borderRadius: 18,
+    padding: 20,
+    gap: 16,
+  },
+  quickActionsHeading: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#0f172a",
+  },
+  quickActionsRow: {
+    flexDirection: "row",
+    gap: 12,
+    flexWrap: "wrap",
   },
   deleteBlock: {
     marginTop: 24,
     gap: 8,
+  },
+  deleteHeading: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#7f1d1d",
   },
   deleteHint: {
     color: "#6b7280",
