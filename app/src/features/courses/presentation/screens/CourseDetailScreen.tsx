@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import {
   ActivityIndicator,
   RefreshControl,
@@ -10,7 +10,7 @@ import {
   Alert,
   Share,
 } from "react-native";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import { useAuth } from "../../../auth";
 import { useCourseDetailController } from "../hooks/useCourseDetailController";
@@ -18,6 +18,8 @@ import { ActionButton } from "../components/ActionButton";
 
 export function CourseDetailScreen() {
   const { courseId } = useLocalSearchParams<{ courseId?: string }>();
+  const navigation = useNavigation();
+  const router = useRouter();
   const { currentUser } = useAuth();
 
   const effectiveCourseId = useMemo(() => {
@@ -29,6 +31,12 @@ export function CourseDetailScreen() {
     currentUserId:
       currentUser?.uuid ?? (currentUser ? String(currentUser.id) : null),
   });
+
+  useEffect(() => {
+    if (controller.course?.title) {
+      navigation.setOptions?.({ title: controller.course.title });
+    }
+  }, [controller.course?.title, navigation]);
 
   if (!effectiveCourseId) {
     return (
@@ -127,9 +135,45 @@ export function CourseDetailScreen() {
     );
   };
 
+  const handleDeleteCourse = () => {
+    Alert.alert(
+      "Eliminar curso",
+      "¿Estás seguro de que deseas eliminar este curso? Esta acción no se puede deshacer.",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await controller.deleteCourse();
+              Alert.alert(
+                "Curso eliminado",
+                "El curso se ha eliminado correctamente."
+              );
+              if (router.canGoBack()) {
+                router.back();
+              } else {
+                router.replace("/" as any);
+              }
+            } catch (error) {
+              Alert.alert(
+                "Error",
+                error instanceof Error
+                  ? error.message
+                  : "No se pudo eliminar el curso."
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
+        style={styles.scroll}
         contentContainerStyle={styles.container}
         refreshControl={
           <RefreshControl
@@ -145,11 +189,6 @@ export function CourseDetailScreen() {
           <View style={styles.headerPills}>
             <View style={styles.pill}>
               <Text style={styles.pillText}>{controller.course.role}</Text>
-            </View>
-            <View style={styles.pill}>
-              <Text style={styles.pillText}>
-                Código: {controller.courseCode ?? "-"}
-              </Text>
             </View>
             <View style={styles.pill}>
               <Text style={styles.pillText}>
@@ -176,25 +215,6 @@ export function CourseDetailScreen() {
             variant="secondary"
           />
         </View>
-
-        {controller.isProfessor && (
-          <View style={styles.actionRow}>
-            <ActionButton
-              label="Crear actividad"
-              onPress={handleCreateActivity}
-            />
-            <ActionButton
-              label="Nueva categoría"
-              onPress={handleCreateCategory}
-              variant="secondary"
-            />
-          </View>
-        )}
-
-        <TabSelector
-          activeTab={controller.activeTab}
-          onChange={controller.changeTab}
-        />
 
         {controller.activeTab === "activities" && (
           <ActivitiesSection
@@ -223,20 +243,31 @@ export function CourseDetailScreen() {
         )}
 
         {controller.activeTab === "info" && (
-          <InfoSection course={controller.course} />
+          <InfoSection
+            course={controller.course}
+            isProfessor={controller.isProfessor}
+            onDeleteCourse={handleDeleteCourse}
+            isDeleting={controller.isDeleting}
+          />
         )}
       </ScrollView>
+      <BottomTabBar
+        activeTab={controller.activeTab}
+        onChange={controller.changeTab}
+      />
     </SafeAreaView>
   );
 }
 
-interface TabSelectorProps {
-  activeTab: "activities" | "students" | "categories" | "info";
-  onChange: (tab: "activities" | "students" | "categories" | "info") => void;
+type CourseTab = "activities" | "students" | "categories" | "info";
+
+interface BottomTabBarProps {
+  activeTab: CourseTab;
+  onChange: (tab: CourseTab) => void;
 }
 
-function TabSelector({ activeTab, onChange }: TabSelectorProps) {
-  const tabs: { key: TabSelectorProps["activeTab"]; label: string }[] = [
+function BottomTabBar({ activeTab, onChange }: BottomTabBarProps) {
+  const tabs: { key: CourseTab; label: string }[] = [
     { key: "activities", label: "Actividades" },
     { key: "students", label: "Estudiantes" },
     { key: "categories", label: "Categorías" },
@@ -244,14 +275,17 @@ function TabSelector({ activeTab, onChange }: TabSelectorProps) {
   ];
 
   return (
-    <View style={styles.tabBar}>
+    <View style={styles.bottomBar}>
       {tabs.map((tab) => {
         const isActive = tab.key === activeTab;
         return (
           <Text
             key={tab.key}
+            style={[
+              styles.bottomTabItem,
+              isActive ? styles.bottomTabItemActive : null,
+            ]}
             onPress={() => onChange(tab.key)}
-            style={[styles.tabItem, isActive ? styles.tabItemActive : null]}
           >
             {tab.label}
           </Text>
@@ -478,6 +512,9 @@ function CategoriesSection({
 
 interface InfoSectionProps {
   course: CourseDetail;
+  isProfessor: boolean;
+  onDeleteCourse: () => void;
+  isDeleting: boolean;
 }
 
 interface CourseDetail {
@@ -490,7 +527,12 @@ interface CourseDetail {
   id?: string;
 }
 
-function InfoSection({ course }: InfoSectionProps) {
+function InfoSection({
+  course,
+  isProfessor,
+  onDeleteCourse,
+  isDeleting,
+}: InfoSectionProps) {
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Información del curso</Text>
@@ -514,6 +556,19 @@ function InfoSection({ course }: InfoSectionProps) {
         <Text style={styles.infoLabel}>Creado el</Text>
         <Text style={styles.infoValue}>{formatDate(course.createdAt)}</Text>
       </View>
+      {isProfessor ? (
+        <View style={styles.deleteBlock}>
+          <ActionButton
+            label={isDeleting ? "Eliminando..." : "Eliminar curso"}
+            onPress={onDeleteCourse}
+            disabled={isDeleting}
+            variant="danger"
+          />
+          <Text style={styles.deleteHint}>
+            Esta acción eliminará el curso y sus inscripciones asociadas.
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -530,10 +585,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f9fafb",
   },
+  scroll: {
+    flex: 1,
+  },
   container: {
     paddingHorizontal: 20,
     paddingVertical: 24,
     gap: 24,
+    paddingBottom: 140,
   },
   centered: {
     flex: 1,
@@ -574,24 +633,25 @@ const styles = StyleSheet.create({
     color: "#075985",
     fontWeight: "600",
   },
-  tabBar: {
+  bottomBar: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    backgroundColor: "#e5e7eb",
-    borderRadius: 12,
-    padding: 4,
+    justifyContent: "space-around",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 16,
+    backgroundColor: "#fff",
+    borderTopWidth: 1,
+    borderTopColor: "#e5e7eb",
   },
-  tabItem: {
+  bottomTabItem: {
     flex: 1,
     textAlign: "center",
-    borderRadius: 10,
-    paddingVertical: 10,
     fontWeight: "600",
-    color: "#4b5563",
+    color: "#6b7280",
+    paddingVertical: 6,
   },
-  tabItemActive: {
-    backgroundColor: "#fff",
-    color: "#1f2937",
+  bottomTabItemActive: {
+    color: "#1d4ed8",
   },
   section: {
     gap: 12,
@@ -702,6 +762,14 @@ const styles = StyleSheet.create({
   infoValue: {
     color: "#111827",
     fontWeight: "600",
+  },
+  deleteBlock: {
+    marginTop: 24,
+    gap: 8,
+  },
+  deleteHint: {
+    color: "#6b7280",
+    fontSize: 13,
   },
   errorText: {
     color: "#991b1b",

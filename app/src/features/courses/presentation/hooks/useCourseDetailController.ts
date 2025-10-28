@@ -37,6 +37,7 @@ export function useCourseDetailController(
   const [activeTab, setActiveTab] = useState<CourseDetailTab>("activities");
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setRefreshing] = useState(false);
+  const [isDeleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadCourse = useCallback(async () => {
@@ -144,6 +145,20 @@ export function useCourseDetailController(
 
   const courseCode = useMemo(() => course?.id ?? courseId, [course, courseId]);
 
+  const deleteCourse = useCallback(async () => {
+    const identifier = course?.id ?? courseId;
+    if (!identifier) {
+      throw new Error("No se pudo determinar el curso a eliminar.");
+    }
+
+    setDeleting(true);
+    try {
+      await repository.delete(identifier);
+    } finally {
+      setDeleting(false);
+    }
+  }, [course?.id, courseId, repository]);
+
   return {
     course,
     activities,
@@ -158,5 +173,7 @@ export function useCourseDetailController(
     refresh,
     error,
     courseCode,
+    deleteCourse,
+    isDeleting,
   };
 }

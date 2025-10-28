@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text } from "react-native";
 
-export type ActionButtonVariant = "primary" | "secondary";
+export type ActionButtonVariant = "primary" | "secondary" | "danger";
 
 export interface ActionButtonProps {
   label: string;
@@ -16,6 +16,7 @@ export function ActionButton({
   variant = "primary",
 }: ActionButtonProps) {
   const isSecondary = variant === "secondary";
+  const isDanger = variant === "danger";
 
   return (
     <Pressable
@@ -23,7 +24,11 @@ export function ActionButton({
       disabled={disabled}
       style={({ pressed }) => [
         styles.base,
-        isSecondary ? styles.secondary : styles.primary,
+        isDanger
+          ? styles.danger
+          : isSecondary
+          ? styles.secondary
+          : styles.primary,
         disabled ? styles.disabled : undefined,
         pressed ? styles.pressed : undefined,
       ]}
@@ -31,7 +36,11 @@ export function ActionButton({
       <Text
         style={[
           styles.label,
-          isSecondary ? styles.labelSecondary : styles.labelPrimary,
+          isDanger
+            ? styles.labelDanger
+            : isSecondary
+            ? styles.labelSecondary
+            : styles.labelPrimary,
           disabled ? styles.labelDisabled : undefined,
         ]}
       >
@@ -53,6 +62,9 @@ const styles = StyleSheet.create({
   secondary: {
     backgroundColor: "#e0f2fe",
   },
+  danger: {
+    backgroundColor: "#ef4444",
+  },
   disabled: {
     backgroundColor: "#cbd5f5",
   },
@@ -68,6 +80,9 @@ const styles = StyleSheet.create({
   },
   labelSecondary: {
     color: "#075985",
+  },
+  labelDanger: {
+    color: "#fff",
   },
   labelDisabled: {
     color: "#f3f4f6",
