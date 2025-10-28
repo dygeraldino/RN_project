@@ -64,6 +64,25 @@ export class RobleEnrollmentService {
     }
   }
 
+  async removeEnrollmentsByCourse(courseId: string): Promise<void> {
+    try {
+      const enrollments = await this.database.read("enrollments");
+      const idsToDelete = enrollments
+        .filter((current) => current["course_id"] === courseId)
+        .map((current) => current["_id"])
+        .filter((id): id is string => typeof id === "string");
+
+      if (idsToDelete.length) {
+        await Promise.all(
+          idsToDelete.map((id) => this.database.delete("enrollments", id))
+        );
+      }
+    } catch (error) {
+      console.warn("Error al eliminar inscripciones asociadas al curso", error);
+      throw error;
+    }
+  }
+
   async isStudentEnrolled(
     studentId: string,
     courseId: string

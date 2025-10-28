@@ -235,8 +235,6 @@ export function CourseDetailScreen() {
             isDeleting={controller.isDeleting}
             onCopyCode={handleCopyCode}
             onShareCode={handleShareCode}
-            onRefresh={controller.refresh}
-            isRefreshing={controller.isRefreshing}
             activityStats={controller.activityStats}
             studentsCount={controller.course.studentCount}
             courseCode={controller.courseCode ?? null}
@@ -509,8 +507,6 @@ interface InfoSectionProps {
   isDeleting: boolean;
   onCopyCode: () => void;
   onShareCode: () => void;
-  onRefresh: () => void;
-  isRefreshing: boolean;
   activityStats: { total: number; pending: number; overdue: number };
   studentsCount: number;
   courseCode: string | null;
@@ -533,8 +529,6 @@ function InfoSection({
   isDeleting,
   onCopyCode,
   onShareCode,
-  onRefresh,
-  isRefreshing,
   activityStats,
   studentsCount,
   courseCode,
@@ -579,11 +573,6 @@ function InfoSection({
 
       <View style={styles.quickActions}>
         <Text style={styles.quickActionsHeading}>Acciones rápidas</Text>
-        <ActionButton
-          label={isRefreshing ? "Actualizando..." : "Actualizar datos"}
-          onPress={onRefresh}
-          disabled={isRefreshing}
-        />
         <View style={styles.quickActionsRow}>
           <ActionButton
             label="Copiar código"

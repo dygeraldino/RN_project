@@ -154,6 +154,10 @@ export function useCourseDetailController(
     setDeleting(true);
     try {
       await repository.delete(identifier);
+      setCourse(null);
+      setActivities([]);
+      setCategories([]);
+      setStudents([]);
     } finally {
       setDeleting(false);
     }

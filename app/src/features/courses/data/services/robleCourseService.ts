@@ -168,6 +168,7 @@ export class RobleCourseService {
   }
 
   async deleteCourse(courseId: string): Promise<void> {
+    await this.enrollments.removeEnrollmentsByCourse(courseId);
     await this.database.delete(COURSES_TABLE, courseId);
   }
 
